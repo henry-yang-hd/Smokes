@@ -13,27 +13,8 @@ library(tidyverse)
 library(primer.tutorials)
 library(tidymodels)
 library(broom)
-```
-
-```{r}
-smokes |> 
-  # Group age into 5-year intervals
-  mutate(age_bin = 5 * (age %/% 5)) |> 
-  # Calculate ever-smoker share by age group and sex
-  group_by(age_bin, sex) |> 
-  summarize(share = mean(smoke == "Yes"), .groups = "drop") |> 
-  # Plot share vs age bin, faceted by sex
-  ggplot(aes(x = age_bin, y = share)) +
-  geom_point() +
-  geom_smooth(method = "loess", formula = y ~ x, se = FALSE) +
-  facet_wrap(~ sex) +
-  # Format y-axis as percentage
-  scale_y_continuous(labels = scales::percent_format()) +
-  labs(
-    title = "Share of Ever-Smokers by Age and Sex",
-    x = "Age (5-Year Bins)",
-    y = "Share of Ever-Smokers"
-  )
+library(gt)
+library(marginaleffects)
 ```
 
 ```{r}
@@ -42,9 +23,22 @@ fit_smokes <- logistic_reg(engine = "glm") |> fit(smoke ~ age + sex, data = smok
 ```
 
 ```{r}
-library(easystats)
-check_predictions(extract_fit_engine(fit_smokes))
+plot_predictions(extract_fit_engine(fit_smokes), condition = c("age", "sex"), draw = FALSE) |> 
+  ggplot(aes(x = age, y = estimate, color = sex, fill = sex)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Predicted Probability of Being an Ever-Smoker by Age and Sex",
+    subtitle = "Older individuals and men have a higher probability of ever smoking",
+    caption = "Data source: NHANES (2009-2012)",
+    x = "Age",
+    y = "Probability of Ever-Smoking",
+    color = "Sex",
+    fill = "Sex"
+  ) +
+  theme_minimal()
 ```
 
 ## Summary
-Age and Sex is a strong predictor of being an ever-smoker. This data comes from the 1,000-adult sample from the 2009-2012 NHANES waves, and we are trying to answer  a question: What is the difference in the probability of being an ever-smoker between a 30-year-old woman and a 70-year-old man? One potential weakness in this model is how its data comes from a sample from 2009-2012, almost a decade ago from the population we are actually trying to model.
+Age and Sex is a strong predictor of being an ever-smoker. This data comes from the 1,000-adult sample from the 2009-2012 NHANES waves, and we are trying to answer  a question: What is the difference in the probability of being an ever-smoker between a 30-year-old woman and a 70-year-old man? One potential weakness in this model is how its data comes from a sample from 2009-2012, almost a decade ago from the population we are actually trying to model. We modeled whether or not an adult is likely to be an ever-smoker as a Bernoulli distribution as a logistic function of age and sex. One quantity of interest is how when comparing two adults of the same age, an adult Male had an average of 54% greater to be an ever-smoker than an adult Female. These estimates might be wrong because of the long gap between the data and the present day. There may be a change in cultural and social traditions in the present day, which might lead to a shift in parameters.

@@ -1,0 +1,50 @@
+---
+title: "Smokes"
+author: "Henry Yang"
+format: html
+execute:
+  echo: false
+---
+
+
+```{r}
+#| message: false
+library(tidyverse)
+library(primer.tutorials)
+library(tidymodels)
+library(broom)
+```
+
+```{r}
+smokes |> 
+  # Group age into 5-year intervals
+  mutate(age_bin = 5 * (age %/% 5)) |> 
+  # Calculate ever-smoker share by age group and sex
+  group_by(age_bin, sex) |> 
+  summarize(share = mean(smoke == "Yes"), .groups = "drop") |> 
+  # Plot share vs age bin, faceted by sex
+  ggplot(aes(x = age_bin, y = share)) +
+  geom_point() +
+  geom_smooth(method = "loess", formula = y ~ x, se = FALSE) +
+  facet_wrap(~ sex) +
+  # Format y-axis as percentage
+  scale_y_continuous(labels = scales::percent_format()) +
+  labs(
+    title = "Share of Ever-Smokers by Age and Sex",
+    x = "Age (5-Year Bins)",
+    y = "Share of Ever-Smokers"
+  )
+```
+
+```{r}
+#| cache: true
+fit_smokes <- logistic_reg(engine = "glm") |> fit(smoke ~ age + sex, data = smokes)
+```
+
+```{r}
+library(easystats)
+check_predictions(extract_fit_engine(fit_smokes))
+```
+
+## Summary
+Age and Sex is a strong predictor of being an ever-smoker. This data comes from the 1,000-adult sample from the 2009-2012 NHANES waves, and we are trying to answer  a question: What is the difference in the probability of being an ever-smoker between a 30-year-old woman and a 70-year-old man? One potential weakness in this model is how its data comes from a sample from 2009-2012, almost a decade ago from the population we are actually trying to model.
